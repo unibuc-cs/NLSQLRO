@@ -3,7 +3,7 @@
 
 ## 1. Obiectiv
 
-Vom construi un **benchmark bilingv NL→SQL** (întrebare în română/engleză → interogare SQL) peste două baze de date relaționale obținute din **date guvernamentale deschise**:
+Vom construi un **benchmark bilingv NL→SQL** (întrebare în română/engleză → interogare SQL) peste două baze de date relaționale obținute din **date guvernamentale deschise** (https://data.gov.ro/dataset):
 
 - Domeniul **Educație** – “Rețeaua școlară” + (opțional) alte date de elevi/rezultate.
 - Domeniul **Transport feroviar** – “Mersul trenurilor de călători”.
