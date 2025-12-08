@@ -8,7 +8,7 @@ Vom construi un **benchmark bilingv NL→SQL** (întrebare în română/engleză
 - Domeniul **Educație** – “Rețeaua școlară” + (opțional) alte date de elevi/rezultate.
 - Domeniul **Transport feroviar** – “Mersul trenurilor de călători”.
 
-Scop: un corpus reutilizabil pentru cercetare (NL→SQL, LLM-uri, educație) și un articol științific.
+Scop: un corpus reutilizabil pentru cercetare (NL→SQL, LLM-uri, educație).
 
 ---
 
