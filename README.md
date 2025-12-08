@@ -55,15 +55,15 @@ Câmpuri obligatorii:
 
 ## 4. Organizarea echipelor și livrabile
 
-### 4.1. Grupuri (20 studenți ≈ 4 × 5)
+### 4.1. Grupuri (20 studenți ≈ 2 × 10)
 
 - **G1 – Edu Schema & Data**
   - Curățare date educație, definire și populare schema `edu_reteaua_scolara`.
-- **G2 – Rail Schema & Data**
+- **G1 – Rail Schema & Data**
   - Curățare date trenuri, definire și populare schema `rail_mers_tren`.
-- **G3 – NL→SQL Edu**
+- **G2 – NL→SQL Edu**
   - Generare întrebări + SQL pentru domeniul Educație (≈200–300 intrări).
-- **G4 – NL→SQL Rail**
+- **G2 – NL→SQL Rail**
   - Generare întrebări + SQL pentru domeniul Trenuri (≈200–300 intrări).
 
 ### 4.2. Faze
@@ -75,7 +75,7 @@ Câmpuri obligatorii:
    - Scripturi Python pentru curățare CSV/XLSX.
    - Fișier `.sql` (schema + insert-uri) sau CSV-uri + script de încărcare.
 
-3. **Faza 2 – Corpus NL→SQL (G3, G4)**
+3. **Faza 2 – Corpus NL→SQL (G1, G2)**
    - Instanțiați template-urile de mai jos cu valori reale.
    - Pentru fiecare intrare:
      - `question_ro`, `question_en`
@@ -84,7 +84,7 @@ Câmpuri obligatorii:
      - `expected_result_description_en`.
 
 4. **Faza 3 – Validare**
-   - Cross-review: G3 verifică intrările G4 și invers.
+   - Cross-review: G1 verifică intrările G2 și invers.
    - Se rezolvă duplicări, erori SQL, formulări neclare.
 
 5. **Faza 4 – Cod & Documentație**
