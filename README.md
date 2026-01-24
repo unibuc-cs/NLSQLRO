@@ -14,23 +14,8 @@ Scop: un corpus reutilizabil pentru cercetare (NL→SQL, LLM-uri, educație).
 
 ## 2. Baze de date (DB) – nivel minim
 
-### 2.1. Educație – `edu_reteaua_scolara`
+Scheme din acest moment sunt puse aici: https://docs.google.com/document/d/1UACwcBtGMgs7RBwRdKzBSzmZc1708a6GmWlklQY9hj0/edit?tab=t.0
 
-Schemă minimă recomandată (ajustați după datele reale):
-
-- `counties(county_id, county_name)`
-- `localities(locality_id, locality_name, county_id)`
-- `schools(school_id, name, locality_id, education_level, environment, ownership_type, nr_students)`
-
-### 2.2. Trenuri – `rail_mers_tren`
-
-Schemă minimă recomandată:
-
-- `stations(station_id, station_name, county_id)`
-- `trains(train_id, train_number, operator_name, category)`
-- `timetable(id, train_id, station_id, arrival_time, departure_time, day_type)`
-
----
 
 ## 3. Structura corpusului NL→SQL (RoGov-SQL)
 
