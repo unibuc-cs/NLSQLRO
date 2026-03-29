@@ -33,7 +33,13 @@ COUNTY_MAP = {
 def esc(val):
     if val is None:
         return "NULL"
-    s = str(val).replace("'", "''")
+    s = str(val)
+    s = s.replace('“', '"')
+    s = s.replace('”', '"')
+    s = s.replace('„', '"')
+    s = s.replace('‘', "'")
+    s = s.replace('’', "'")
+    s = s.replace("'", "''")
     return f"'{s}'"
 
 def int_or_null(val):
@@ -62,6 +68,7 @@ for i, row in enumerate(ws_r.iter_rows(values_only=True)):
         continue
     if all(c is None for c in row):
         continue
+    # Transformam tuplul de valori intr-un dictionar {nume_coloana: valoare}
     retea_rows.append(dict(zip(retea_headers, row)))
 
 print(f"  → {len(retea_rows)} rânduri citite din retea-scolara")
@@ -95,7 +102,7 @@ print(f"  → {len(elevi_rows)} rânduri citite din elevi-inmatriculati")
 # ──────────────────────────────────────────────
 print("Agregare date elevi per școală ...")
 agg_students = defaultdict(int)
-agg_levels   = defaultdict(set)
+agg_levels = defaultdict(set)
 
 for row in elevi_rows:
     cod = str(row.get('Cod unitate PJ', '') or '').strip()
@@ -115,7 +122,7 @@ for row in elevi_rows:
     if nivel:
         agg_levels[cod].add(nivel)
 
-# Convertim nivelurile în string sortat
+# Convertim setul de niveluri intr-un string sortat si concatenat cu virgula.
 agg_levels_str = {
     cod: ', '.join(sorted(niveluri))
     for cod, niveluri in agg_levels.items()
@@ -126,6 +133,7 @@ print(f"  → {len(agg_students)} școli cu date de elevi")
 # ──────────────────────────────────────────────
 # 4. Construire COUNTIES
 # ──────────────────────────────────────────────
+# Folosim un set ca sa colectam codurile unice de judete, acelasi cod apare de mii de ori in fisier, vrem o singura intrare per judet.
 county_codes_seen = set()
 for row in retea_rows:
     cod = str(row.get('Judet PJ', '') or '').strip()
@@ -171,7 +179,7 @@ for row in retea_rows:
             'locality_id':    loc_idx,
             'locality_name':  loc_name,
             'residency_area': mediu,
-            'county_id':      county_id,
+            'county_id':      county_id, # salvam id-ul judetului in dictionarul localitatii pentru a deveni cheie straina
         })
         loc_idx += 1
 
@@ -204,6 +212,8 @@ for row in retea_rows:
     statut = str(row.get('Statut unitate', '') or '').strip()  # PJ sau AR
 
     # Denumire: pentru PJ folosim Denumire PJ, pentru AR - Denumire lunga unitate
+    # PJ (Personalitate Juridica) = institutie independenta cu cod fiscal propriu.
+    # AR (structura Aronata) = apartine unui PJ, nu are autonomie juridica.
     if statut == 'PJ':
         name = str(row.get('Denumire PJ', '') or '').strip()
     else:
@@ -264,7 +274,7 @@ lines.append("-- ============================================================")
 lines.append("-- RoGov-SQL – educatie")
 lines.append("-- Generat din: retea-scolara-2024-2025.xlsx & elevi-inmatriculati-2024-2025.xlsx")
 lines.append("-- ============================================================\n")
-
+# SQLite dezactiveaza foreign keys implicit
 lines.append("PRAGMA foreign_keys = ON;\n")
 lines.append("BEGIN TRANSACTION;\n")
 
