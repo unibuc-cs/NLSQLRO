@@ -1,96 +1,221 @@
-# Faza 1: Curățare și Generare Baze de Date (Echipa G1)
+# Faza 1: Data Cleaning and Database Generation (RO/EN)
 
-Acest director conține scripturile Python necesare pentru a procesa seturile de date brute guvernamentale și a genera fișierele `.sql` cu structura și datele pentru cele două domenii ale proiectului: Educație și Transport Feroviar.
+## Romanian
+
+### Scop
+
+Acest folder contine scripturile Python care proceseaza date brute guvernamentale si genereaza fisiere SQL pentru cele doua domenii din proiect:
+
+- educatie (`edu_reteaua_scolara.sql`)
+- transport feroviar (`rail_mers_tren.sql`)
+
+### 1. Domeniul Educatie (`edu_reteaua_scolara`)
+
+#### 1.1 Fisiere de intrare necesare
+
+Plaseaza aceste fisiere in acelasi folder cu scriptul:
+
+- `retea-scolara-2024-2025.xlsx` (dataset: https://data.gov.ro/dataset/retea-scolara)
+- `elevi-inmatriculati-2024-2025.xlsx` (dataset: https://data.gov.ro/dataset/elevi-inmatriculati)
+
+#### 1.2 Dependinte
+
+- Python 3.12+
+- `openpyxl`
+
+Instalare:
+
+```bash
+pip install openpyxl
+```
+
+#### 1.3 Rulare
+
+```bash
+python clean_educatie.py
+```
+
+Output: `edu_reteaua_scolara.sql` (`CREATE TABLE` + `INSERT INTO` pentru SQLite).
+
+#### 1.4 Structura bazei de date
+
+- `counties(county_id, county_code, county_name)`
+- `localities(locality_id, locality_name, residency_area, county_id)`
+- `schools(school_id, school_name, short_name, siiir_code, locality_id, ownership_type, unit_type, education_level, number_of_students)`
+
+#### 1.5 Note tehnice importante
+
+- `county_name` este populat dintr-un dictionar intern (`COUNTY_MAP`) pe baza codului de judet.
+- `siiir_code` este normalizat cu `zfill(10)` ca sa pastreze zerourile initiale.
+- Legatura dintre cele doua fisiere Excel se face logic prin:
+  - `Cod SIIIR PJ` (reteaua scolara)
+  - `Cod unitate PJ` (elevi)
+- `number_of_students` se agregeaza doar pentru `unit_type = 'PJ'`.
+- Pentru `AR`, `number_of_students` si `education_level` raman de regula `NULL`.
+- `education_level` poate contine mai multe valori concatenate, deci pentru filtre foloseste `LIKE`.
+
+#### 1.6 Statistici (conform rulajului descris de echipa)
+
+- Input:
+  - randuri din reteaua scolara: 18,200
+  - randuri din elevi inmatriculati: 133,838
+- Output:
+  - judete: 42
+  - localitati unice: 7,284
+  - unitati scolare (PJ + AR): 18,200
+
+### 2. Domeniul Transport Feroviar (`rail_mers_tren`)
+
+#### 2.1 Fisier de intrare necesar
+
+Scriptul cauta local fisierul:
+
+- `trenuri-2025-2026_interregional-calator.xml`
+
+Dataset sursa: https://data.gov.ro/dataset/mers-tren-interregional-calatori
+
+Nota: daca fisierul descarcat are alt nume, redenumeste-l la numele asteptat de script sau modifica scriptul.
+
+#### 2.2 Dependinte
+
+- Python 3.12+
+- doar biblioteca standard (`xml.etree.ElementTree`)
+
+#### 2.3 Rulare
+
+```bash
+python curatare_trenuri.py
+```
+
+Output: `rail_mers_tren.sql` (`CREATE TABLE` + `INSERT INTO` in batch-uri).
+
+#### 2.4 Structura bazei de date
+
+- `stations(station_id, station_number, station_name, county)`
+- `trains(train_id, train_number, operator_name, category)`
+- `timetables(timetable_id, train_id, station_id, arrival_time, departure_time, service_category, day_type)`
+
+#### 2.5 Note tehnice importante
+
+- `station_name` vine din `DenStaDestinatie`.
+- `county` este inferat euristic pe baza numelui statiei; statii neclasificate: `Alte Judete`.
+- `train_number` vine din atributul XML `Numar`.
+- `operator_name` vine din atributul XML `Operator`.
+- `arrival_time` si `departure_time` sunt convertite din secunde brute in `HH:MM`.
+- `day_type` este decodat din bitmask-ul `Zile` (ex: `Zilnic`, `Luni - Vineri`).
+
+### Fisiere generate
+
+- `edu_reteaua_scolara.sql`
+- `rail_mers_tren.sql`
 
 ---
 
-## 1. Domeniul Educație (`edu_reteaua_scolara`) 
+## English
 
-### 1.1. Surse de date necesare
-Pentru a rula scriptul, următoarele fișiere trebuie să fie prezente în același director:
-* [`retea-scolara-2024-2025.xlsx`](https://data.gov.ro/dataset/retea-scolara)
-* [`elevi-inmatriculati-2024-2025.xlsx`](https://data.gov.ro/dataset/elevi-inmatriculati)
+### Purpose
 
-### 1.2. Cerințe și Dependințe
-Scriptul este scris în Python și folosește biblioteca `openpyxl` pentru a citi și procesa fișierele Excel.
-Pentru instalarea dependențelor rulați:
-`pip install openpyxl`
+This folder contains Python scripts that process raw government data and generate SQL files for the two project domains:
 
-### 1.3. Instrucțiuni de rulare
-Executați scriptul din terminal:
-`python clean_educatie.py`
+- education (`edu_reteaua_scolara.sql`)
+- rail transport (`rail_mers_tren.sql`)
 
-În urma rulării, se va genera fișierul `edu_reteaua_scolara.sql`, care conține instrucțiunile `CREATE TABLE` și `INSERT INTO` necesare pentru a popula baza de date SQLite.
+### 1. Education domain (`edu_reteaua_scolara`)
 
-### 1.4. Structura Bazei de Date și Limitări 
+#### 1.1 Required input files
 
-Scriptul generează 3 tabele relaționale. Pentru a scrie interogări SQL corecte, țineți cont de următoarele decizii tehnice luate în timpul curățării datelor:
+Place these files in the same folder as the script:
 
-* **counties** (Județe)
-  * Conține lista județelor (ID, cod, nume complet).
-  * *Notă:* Deoarece datele sursă conțineau doar codul auto (ex: AB, CJ), numele complet al județului a fost populat printr-o mapare manuală predefinită în script.
+- `retea-scolara-2024-2025.xlsx` (dataset: https://data.gov.ro/dataset/retea-scolara)
+- `elevi-inmatriculati-2024-2025.xlsx` (dataset: https://data.gov.ro/dataset/elevi-inmatriculati)
 
-* **localities** (Localități)
-  * Conține localitățile extrase (ID, nume, mediu rezidență, FK către județ).
+#### 1.2 Dependencies
 
-* **schools** (Unități Școlare)
-  * Conține unitățile (ID, nume, cod SIIIR, FK către localitate, proprietate, statut, niveluri educație, număr total elevi).
-  * *Notă school_name:* Pentru unitățile cu statut PJ, preia Denumire PJ. Pentru unitățile arondate (AR), se folosește Denumire lunga unitate, deoarece acestea sunt entități distincte cu nume propriu diferit față de PJ-ul de care aparțin.
-  * *Notă siiir_code:* Pentru JOIN-ul logic dintre fișiere, toate codurile au fost normalizate cu `zfill(10)` pentru a preveni pierderea zerourilor inițiale la parsare.
-  * *Notă unit_type:* Tabela conține atât unități cu personalitate juridică (PJ) cât și structuri arondate (AR). Interogările care vizează doar unități independente trebuie să filtreze cu `WHERE unit_type = 'PJ'`.
-  * *Notă education_level:* O școală cu mai multe niveluri are valorile concatenate alfabetic (ex: "Gimnazial, Liceal, Primar"). Folosiți operatorul `LIKE` pentru filtrări (ex: `education_level LIKE '%Gimnazial%'`), nu egalitatea strictă.
-  * *Notă number_of_students:* Valoarea reprezintă suma elevilor, agregată după codul PJ. Pentru structurile arondate (AR), coloana este `NULL`, raportarea fiind centralizată pe PJ.
+- Python 3.12+
+- `openpyxl`
 
-### 1.5. Statistici Date Extrase
-În urma procesării fișierelor oficiale, volumul de date gestionat este:
+Install:
 
-**Date procesate (Input):**
-* Rânduri citite din Rețeaua Școlară: 18.200
-* Rânduri citite din Elevi Înmatriculați: 133.838
+```bash
+pip install openpyxl
+```
 
-**Date agregate și deduplicate (Output în DB):**
-* **Județe:** 42
-* **Localități unice:** 7.284
-* **Unități școlare (PJ + AR):** 18.200 (numărul coincide cu inputul deoarece fiecare rând din rețeaua școlară reprezintă o unitate distinctă — deduplicarea a eliminat doar eventualele apariții duplicate ale aceluiași cod SIIIR)
+#### 1.3 Run
 
----
+```bash
+python clean_educatie.py
+```
 
-## 2. Domeniul Transport Feroviar (`rail_mers_tren`) 
+Output: `edu_reteaua_scolara.sql` (`CREATE TABLE` + `INSERT INTO` for SQLite).
 
-### 2.1. Surse de date necesare
-Pentru a rula scriptul, următorul fișier trebuie să fie prezent în același director:
-* [`trenuri-2025-2026_interregional-calator.xml`](https://data.gov.ro/dataset/mers-tren-interregional-calatori) 
+#### 1.4 Database schema
 
-### 2.2. Cerințe și Dependințe
-Scriptul este scris în Python și folosește biblioteca standard `xml.etree.ElementTree` pentru parsarea structurii XML. Nu sunt necesare biblioteci externe suplimentare.
+- `counties(county_id, county_code, county_name)`
+- `localities(locality_id, locality_name, residency_area, county_id)`
+- `schools(school_id, school_name, short_name, siiir_code, locality_id, ownership_type, unit_type, education_level, number_of_students)`
 
-### 2.3. Instrucțiuni de rulare
-Executați scriptul din terminal:
-`python curatare_trenuri.py`
+#### 1.5 Important technical notes
 
-În urma rulării, se va genera fișierul `rail_mers_tren.sql`. Acesta conține instrucțiunile `CREATE TABLE` și `INSERT INTO` (grupate în batch-uri pentru performanță) necesare pentru a popula baza de date SQLite.
+- `county_name` is populated from an internal mapping (`COUNTY_MAP`) using county code.
+- `siiir_code` is normalized with `zfill(10)` to preserve leading zeros.
+- The logical join between the two Excel files is:
+  - `Cod SIIIR PJ` (school network file)
+  - `Cod unitate PJ` (student file)
+- `number_of_students` is aggregated only for `unit_type = 'PJ'`.
+- For `AR`, `number_of_students` and `education_level` are typically `NULL`.
+- `education_level` may contain multiple concatenated values, so use `LIKE` for filtering.
 
-### 2.4. Structura Bazei de Date și Limitări 
+#### 1.6 Statistics (as reported by the team run)
 
-* **stations** (Stații) 
-  * Conține lista stațiilor (ID, cod, nume, județ).
-  * *Notă station_name:* Datele sunt preluate din atributul `DenStaDestinatie`.
-  * *Notă county:* Deoarece fișierul XML sursă nu conține informații administrative, județul a fost populat printr-o funcție de detecție euristică/manuală în script. Stațiile neidentificate primesc valoarea 'Alte Județe'.
+- Input:
+  - school network rows: 18,200
+  - enrolled students rows: 133,838
+- Output:
+  - counties: 42
+  - unique localities: 7,284
+  - school units (PJ + AR): 18,200
 
-* **trains** (Trenuri) 
-  * Conține detaliile trenurilor (ID, număr, operator, categorie).
-  * *Notă train_number:* Preluat din atributul `Numar`.
-  * *Notă operator_name:* Preluat din atributul `Operator`.
+### 2. Rail domain (`rail_mers_tren`)
 
-* **timetables** (Orar de circulație)
-  * Conține orele de sosire/plecare și zilele de circulație.
-  * *Notă arrival_time / departure_time:* Timpul a fost convertit din secundele brute ale XML-ului în format text **HH:MM** conform formulei de calcul standard.
-  * *Notă day_type:* Atributul bitmask `Zile` din `CalendarTren` a fost decodat în script pentru a afișa zilele săptămânii în limbaj natural (ex: 'Zilnic', 'Luni - Vineri'). Folosiți aceste denumiri textuale în filtrări.
+#### 2.1 Required input file
 
-### 2.5. Statistici Date Extrase
-* **Stații unice:** Extrase pe baza combinației `CodStaDest` și `DenStaDestinatie`. 
-* **Trenuri:** Înregistrate cu categoriile aferente (R, IR, R-E). 
-* **Orare:** Toate opririle au fost mapate prin chei externe (`train_id`, `station_id`). 
+The script expects this local filename:
 
----
-**Fișiere rezultate:** `edu_reteaua_scolara.sql` și `rail_mers_tren.sql`.
+- `trenuri-2025-2026_interregional-calator.xml`
+
+Source dataset: https://data.gov.ro/dataset/mers-tren-interregional-calatori
+
+Note: if the downloaded file has a different name, rename it to the expected one or update the script.
+
+#### 2.2 Dependencies
+
+- Python 3.12+
+- standard library only (`xml.etree.ElementTree`)
+
+#### 2.3 Run
+
+```bash
+python curatare_trenuri.py
+```
+
+Output: `rail_mers_tren.sql` (`CREATE TABLE` + batch `INSERT INTO` statements).
+
+#### 2.4 Database schema
+
+- `stations(station_id, station_number, station_name, county)`
+- `trains(train_id, train_number, operator_name, category)`
+- `timetables(timetable_id, train_id, station_id, arrival_time, departure_time, service_category, day_type)`
+
+#### 2.5 Important technical notes
+
+- `station_name` comes from `DenStaDestinatie`.
+- `county` is assigned heuristically from station names; unmatched stations become `Alte Judete`.
+- `train_number` comes from XML attribute `Numar`.
+- `operator_name` comes from XML attribute `Operator`.
+- `arrival_time` and `departure_time` are converted from raw seconds to `HH:MM`.
+- `day_type` is decoded from the `Zile` bitmask (for example `Zilnic`, `Luni - Vineri`).
+
+### Generated files
+
+- `edu_reteaua_scolara.sql`
+- `rail_mers_tren.sql`

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Black">
+    <option name="sdkName" value="$PROJECT_DIR$/../miniconda3" />
+  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="Remote 3.12 (sftp://fizlabrl@10.23.13.53:22/mnt/home/fizlabrl/NLSQLRO/.venv/bin/python)" project-jdk-type="Python SDK" />
+</project>

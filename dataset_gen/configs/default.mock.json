@@ -1,0 +1,47 @@
+{
+  "random_seed": 42,
+  "domains": [
+    {
+      "name": "education",
+      "db_id": "edu_reteaua_scolara",
+      "sql_dump": "../../Faza_1/edu_reteaua_scolara.sql",
+      "id_prefix": "edu",
+      "target_count": 40,
+      "min_rows": 1
+    },
+    {
+      "name": "trains",
+      "db_id": "rail_mers_tren",
+      "sql_dump": "../../Faza_1/rail_mers_tren.sql",
+      "id_prefix": "rail",
+      "target_count": 40,
+      "min_rows": 1
+    }
+  ],
+  "provider": {
+    "mode": "mock",
+    "teacher_model": "Qwen2.5-Coder-32B-Instruct",
+    "translator_model": "gpt-5-mini",
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY",
+    "temperature": 0.2,
+    "max_tokens": 900,
+    "timeout_seconds": 90
+  },
+  "generation": {
+    "max_attempts_per_example": 4,
+    "max_total_attempts_factor": 60,
+    "strict_non_empty": true,
+    "difficulty_cycle": [1, 1, 2, 2, 3],
+    "dedup_on_sql": true,
+    "dedup_on_question": true
+  },
+  "output": {
+    "out_dir": "../../generated",
+    "master_jsonl": "rogov_master.jsonl",
+    "alpaca_jsonl": "rogov_alpaca.jsonl",
+    "chat_jsonl": "rogov_chat.jsonl",
+    "stats_json": "stats.json"
+  }
+}
+

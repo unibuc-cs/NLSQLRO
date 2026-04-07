@@ -1,0 +1,79 @@
+{
+  "runtime_seconds": 1.315,
+  "config": {
+    "provider_mode": "mock",
+    "strict_non_empty": true
+  },
+  "domains": {
+    "education": {
+      "db_id": "edu_reteaua_scolara",
+      "target_count": 40,
+      "generated_count": 40,
+      "counters": {
+        "attempts_total": 87,
+        "accepted": 40,
+        "failed_sql": 0,
+        "failed_empty": 0,
+        "failed_duplicate": 47,
+        "failed_generation": 0,
+        "translation_fallback": 0
+      }
+    },
+    "trains": {
+      "db_id": "rail_mers_tren",
+      "target_count": 40,
+      "generated_count": 40,
+      "counters": {
+        "attempts_total": 75,
+        "accepted": 40,
+        "failed_sql": 0,
+        "failed_empty": 10,
+        "failed_duplicate": 35,
+        "failed_generation": 0,
+        "translation_fallback": 0
+      }
+    }
+  },
+  "aggregate": {
+    "total_examples": 80,
+    "by_domain": {
+      "education": 40,
+      "trains": 40
+    },
+    "by_difficulty": {
+      "1": 32,
+      "2": 32,
+      "3": 16
+    },
+    "by_query_type": {
+      "AVG": 8,
+      "BETWEEN": 3,
+      "COUNT": 32,
+      "DISTINCT": 27,
+      "EXISTS": 1,
+      "FILTER": 47,
+      "GROUP_BY": 41,
+      "HAVING": 15,
+      "JOIN": 75,
+      "LIKE": 6,
+      "LIMIT": 26,
+      "MAX": 2,
+      "MIN": 2,
+      "ORDER_BY": 69,
+      "SELECT": 80,
+      "SUBQUERY": 7,
+      "SUM": 7,
+      "WITH": 3
+    },
+    "row_count_summary": {
+      "min": 1,
+      "max": 4693,
+      "avg": 91.6625
+    }
+  },
+  "outputs": {
+    "master_jsonl": "Y:\\NLSQLRO\\generated\\rogov_master.jsonl",
+    "alpaca_jsonl": "Y:\\NLSQLRO\\generated\\rogov_alpaca.jsonl",
+    "chat_jsonl": "Y:\\NLSQLRO\\generated\\rogov_chat.jsonl"
+  }
+}

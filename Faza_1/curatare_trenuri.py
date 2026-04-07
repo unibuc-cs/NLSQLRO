@@ -3,7 +3,7 @@ RoGov-SQL – Faza 1: Curățare date feroviare (Trenuri)
 Sursa: trenuri-2025-2026_interregional-calatori.xml
 Output: rail_mers_tren.sql (schema + INSERT-uri)
 """
-
+import os
 import xml.etree.ElementTree as ET
 
 # 0. Functii de decodare si curatare
@@ -90,7 +90,15 @@ def esc(val):
 
 print("Deschidere fișier XML...")
 try:
-    tree = ET.parse('trenuri-2025-2026_interregional-calator.xml')
+    try:
+        tree = ET.parse('trenuri-2025-2026_interregional-calatori.xml')
+    except FileNotFoundError:
+        # print all the files in the current directory for debugging
+        print(os.listdir("."))
+        print("=================================")
+        print(os.listdir(".."))
+        print(os.path.exists("trenuri-2025-2026_interregional-calatori.xml"))
+        tree = ET.parse(os.path.join('../trenuri-2025-2026_interregional-calator.xml'))
     root = tree.getroot()
 except Exception as e:
     print(f"Eroare la citirea XML: {e}")
