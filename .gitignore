@@ -1,2 +1,112 @@
+# =========================
+# Python environments
+# =========================
 .venv/
-**/.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Python cache / build
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# =========================
+# Test / coverage / tooling
+# =========================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# PyCharm / IDE
+# =========================
+.idea/
+*.iml
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+wandb/
+runs/
+tensorboard/
+tb_logs/
+
+# =========================
+# ML outputs / checkpoints
+# =========================
+checkpoints/
+outputs/
+artifacts/
+experiments/
+results/
+predictions/
+cache/
+tmp/
+temp/
+
+# Large model / dataset folders
+data/
+datasets/
+models/
+
+# Common ML file types you may not want in Git
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+*.h5
+*.pkl
+*.joblib
+*.npy
+*.npz
+*.parquet
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.bz2
+*.7z
+
+# Media generated during experiments
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.gif
+
+# Images generated as debug outputs
+debug_plot_*.png
