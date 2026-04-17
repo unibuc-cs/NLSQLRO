@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="fizlabrl@10.23.13.53:22 agent" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
       <paths name="fizlabrl@10.23.13.53:22 agent">
         <serverdata>
           <mappings>
-            <mapping deploy="/tmp/pycharm_project_486" local="$PROJECT_DIR$" />
+            <mapping deploy="/mnt/home/fizlabrl/NLSQLRO" local="$PROJECT_DIR$" />
           </mappings>
+          <excludedPaths>
+            <excludedPath path="/mnt/home/fizlabrl/NLSQLRO/.venv" />
+            <excludedPath path="/mnt/home/fizlabrl/NLSQLRO/vllm4" />
+          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>

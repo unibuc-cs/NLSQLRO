@@ -1,397 +1,141 @@
-# RoGov-SQL: Bilingual NL-to-SQL Benchmark (RO/EN)
+# NLSQLRO
 
-## Romanian
+NLSQLRO is a Romanian NL-to-SQL dataset project built around three parts:
 
-### Despre proiect
+- `dataset_generator/`: synthetic data generation pipeline
+- `datasets_external/`: external dataset preprocessing and translation workspace
+- `research_plan/`: source materials and SQL dump preparation scripts
 
-RoGov-SQL este un benchmark bilingv `NL -> SQL` pentru date guvernamentale deschise din Romania.
+The repository supports local generation with vLLM, dataset preparation for
+LLaMA-Factory, and staged fine-tuning workflows.
 
-Scopul: intrebari in romana si engleza care se mapeaza la SQL corect pentru doua domenii:
+## Repository Layout
 
-- educatie (`edu_reteaua_scolara`)
-- transport feroviar (`rail_mers_tren`)
+- `dataset_generator/`: generation, validation, export, and training-data prep
+- `datasets/`: generated datasets and normalized training artifacts
+- `datasets_external/`: external pipeline scripts and raw merged artifacts
+- `research_plan/Faza_1/`: scripts and input files for building SQLite SQL dumps
+- `training/llamafactory/`: LLaMA-Factory training YAMLs
+- `scripts/`: operational helper scripts
+- `tests/`: endpoint checks and utility tests
 
-Repository-ul este un pipeline de pregatire date, nu un API sau o aplicatie web.
+## Prerequisites
 
-### Structura repository
+- Python virtual environment in `.venv`
+- CUDA-capable machine for vLLM generation
+- SQL dump inputs in `research_plan/Faza_1/`
+- vLLM and model weights installed separately in your active environment
 
-- `Faza_0/`: specificatii initiale
-- `Faza_1/`: scripturi de curatare + SQL generat
-- `README.md`: descriere proiect + template-uri NL-to-SQL
+Activate the project environment:
 
-### Schema reala (conform `Faza_1`)
-
-Schema educatie:
-
-- `counties(county_id, county_code, county_name)`
-- `localities(locality_id, locality_name, residency_area, county_id)`
-- `schools(school_id, school_name, short_name, siiir_code, locality_id, ownership_type, unit_type, education_level, number_of_students)`
-
-Schema trenuri:
-
-- `stations(station_id, station_number, station_name, county)`
-- `trains(train_id, train_number, operator_name, category)`
-- `timetables(timetable_id, train_id, station_id, arrival_time, departure_time, service_category, day_type)`
-
-### Template-uri NL-to-SQL corecte pe schema
-
-#### Educatie
-
-Template E1:
-
-- RO: `Listeaza toate scolile din judetul [COUNTY_NAME].`
-- EN: `List all schools in [COUNTY_NAME] county.`
-
-```sql
-SELECT s.school_id, s.school_name, l.locality_name
-FROM schools s
-JOIN localities l ON s.locality_id = l.locality_id
-JOIN counties c ON l.county_id = c.county_id
-WHERE c.county_name = '[COUNTY_NAME]';
+```bash
+source scripts/activate.sh
+python -V
 ```
 
-Template E2:
+## Prepare SQL Dumps
 
-- RO: `Listeaza scolile din mediul [RESIDENCY_AREA] din judetul [COUNTY_NAME].`
-- EN: `List schools in [RESIDENCY_AREA] areas from [COUNTY_NAME] county.`
+The generator expects these dump files:
 
-```sql
-SELECT s.school_id, s.school_name, l.locality_name
-FROM schools s
-JOIN localities l ON s.locality_id = l.locality_id
-JOIN counties c ON l.county_id = c.county_id
-WHERE c.county_name = '[COUNTY_NAME]'
-  AND l.residency_area = '[RESIDENCY_AREA]';
+- `research_plan/Faza_1/edu_reteaua_scolara.sql`
+- `research_plan/Faza_1/rail_mers_tren.sql`
+
+If they do not exist yet, build them with:
+
+```bash
+cd research_plan/Faza_1
+python clean_educatie.py
+python curatare_trenuri.py
+cd ../..
 ```
 
-Template E3:
+## Run vLLM
 
-- RO: `Care este numarul total de elevi in scolile liceale (PJ) din judetul [COUNTY_NAME]?`
-- EN: `What is the total number of students in high-school-level legal-entity schools in [COUNTY_NAME] county?`
+Example single-endpoint launch:
 
-```sql
-SELECT SUM(s.number_of_students) AS total_students
-FROM schools s
-JOIN localities l ON s.locality_id = l.locality_id
-JOIN counties c ON l.county_id = c.county_id
-WHERE c.county_name = '[COUNTY_NAME]'
-  AND s.unit_type = 'PJ'
-  AND s.education_level LIKE '%Liceal%';
+```bash
+CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 \
+  --host 0.0.0.0 \
+  --port 8001 \
+  --tensor-parallel-size 1 \
+  --dtype auto \
+  --max-model-len 32768 \
+  --generation-config vllm
 ```
 
-#### Trenuri
+Smoke-check the endpoint:
 
-Template T1:
-
-- RO: `Listeaza toate trenurile operate de [OPERATOR].`
-- EN: `List all trains operated by [OPERATOR].`
-
-```sql
-SELECT t.train_id, t.train_number, t.category
-FROM trains t
-WHERE t.operator_name = '[OPERATOR]';
+```bash
+python tests/check_vllm_qwen35_endpoint.py --base-url http://127.0.0.1:8001/v1
 ```
 
-Template T2:
+## Generate Data
 
-- RO: `Listeaza toate trenurile care pleaca din statia [STATION_NAME] intre [TIME_START] si [TIME_END].`
-- EN: `List all trains departing from [STATION_NAME] between [TIME_START] and [TIME_END].`
+Single-endpoint smoke run:
 
-```sql
-SELECT DISTINCT t.train_number, t.operator_name, tt.departure_time
-FROM trains t
-JOIN timetables tt ON t.train_id = tt.train_id
-JOIN stations s ON tt.station_id = s.station_id
-WHERE s.station_name = '[STATION_NAME]'
-  AND tt.departure_time >= '[TIME_START]'
-  AND tt.departure_time <= '[TIME_END]'
-ORDER BY tt.departure_time;
+```bash
+python -m dataset_generator.cli generate \
+  --config dataset_generator/configs/vllm.smoke.8001.json \
+  --progress-every 1
+
+python -m dataset_generator.cli validate \
+  --config dataset_generator/configs/vllm.smoke.8001.json
 ```
 
-Template T3:
+Main generation run:
 
-- RO: `Listeaza trenurile care trec prin [STATION_A] si apoi prin [STATION_B].`
-- EN: `List trains that pass through [STATION_A] and then [STATION_B].`
+```bash
+python -m dataset_generator.cli generate \
+  --config dataset_generator/configs/vllm.template.json \
+  --progress-every 10
 
-```sql
-SELECT DISTINCT t.train_number, t.operator_name
-FROM trains t
-JOIN timetables tta ON t.train_id = tta.train_id
-JOIN stations sa ON tta.station_id = sa.station_id
-JOIN timetables ttb ON t.train_id = ttb.train_id
-JOIN stations sb ON ttb.station_id = sb.station_id
-WHERE sa.station_name = '[STATION_A]'
-  AND sb.station_name = '[STATION_B]'
-  AND tta.timetable_id < ttb.timetable_id;
+python -m dataset_generator.cli validate \
+  --config dataset_generator/configs/vllm.template.json
 ```
 
-### Observatii importante
+Multi-GPU generation with one vLLM endpoint per GPU:
 
-- Pentru educatie, `AR` are de regula `number_of_students = NULL`; pentru agregari, filtrati cu `s.unit_type = 'PJ'`.
-- Pentru nivel educational, folositi `LIKE` pe `education_level`, nu egalitate stricta.
-- Pentru trenuri, folositi tabela `timetables` (plural), nu `timetable`.
-
-### Dataset extern (intermediate finetune)
-
-Pentru pre-antrenare intermediara NL-to-SQL in romana, proiectul foloseste si dataset-ul extern:
-
-- `madlad_4gpu_full_merged/operators_alpaca_ro.jsonl`
-- `madlad_4gpu_full_merged/queries_alpaca_ro.jsonl`
-- `madlad_4gpu_full_merged/manifest_merged.json`
-
-Acest dataset este util, dar necesita curatare inainte de finetune:
-
-- unele randuri au probleme de dialect SQL / executie (`DATE_SUB`, `DATEADD`, `NOW`, `YEAR`, etc.)
-- exista texte cu encoding inconsistent in campurile de limbaj natural
-
-Curatarea se face cu:
-
-- `dataset_gen/clean_madlad_dataset.py`
-
-Reguli tehnice ale curatarii:
-
-- SQL-ul (`output`) si contextul SQL din `input` NU sunt rescrise
-- nume de tabele/coloane/comenzi SQL raman in engleza
-- se normalizeaza doar campurile de limbaj natural (`instruction`, `system`, intrebare RO, `metadata.sql_explanation_ro`)
-- optional se valideaza executia SQL per rand in SQLite (`context + output`)
-- optional se aplica reguli pe tip de track:
-  - `queries`: doar `SELECT/WITH`
-  - `operators`: doar DML/DDL
-
-Comanda recomandata pe server (paralel):
-
-```powershell
-python -m dataset_gen.clean_madlad_dataset `
-  --input-dir madlad_4gpu_full_merged `
-  --output-dir madlad_4gpu_full_merged_clean `
-  --workers 32 `
-  --strict-sql-type
+```bash
+python -m dataset_generator.cli generate-multi-gpu \
+  --config dataset_generator/configs/vllm.template.json \
+  --gpus 0,1,2,3 \
+  --base-urls http://127.0.0.1:8001/v1,http://127.0.0.1:8002/v1,http://127.0.0.1:8003/v1,http://127.0.0.1:8004/v1 \
+  --artifact alpaca \
+  --work-dir datasets/multi_gpu_runs \
+  --progress-every 1
 ```
 
-Output:
+## Prepare Training Data
 
-- `madlad_4gpu_full_merged_clean/operators_alpaca_ro.clean.jsonl`
-- `madlad_4gpu_full_merged_clean/queries_alpaca_ro.clean.jsonl`
-- `madlad_4gpu_full_merged_clean/manifest_clean.json` (rate de pastrare, motive de drop, statistici)
+Normalize local datasets into a LLaMA-Factory-ready layout:
 
-#### Strategie recomandata de finetune (2 etape)
-
-Etapa 1: intermediate SFT pe dataset extern curatat
-
-- scop: invatare generala NL-to-SQL in romana
-- date: `operators_alpaca_ro.clean.jsonl` + `queries_alpaca_ro.clean.jsonl`
-- amestec recomandat:
-  - 60% `queries`
-  - 40% `operators`
-
-Etapa 2: in-domain SFT pe RoGov
-
-- scop: adaptare la schema/tabelele reale din proiect (`edu_reteaua_scolara`, `rail_mers_tren`)
-- date: setul intern generat/validat (`rogov_master.jsonl` sau export Alpaca/Chat)
-- amestec recomandat la inceputul etapei:
-  - 80% RoGov
-  - 20% subset extern curatat (pentru retenție de generalizare)
-
-Checkpoint-uri de evaluare recomandate:
-
-- dupa Etapa 1: validare pe benchmark intern mic RoGov + subset extern holdout
-- dupa Etapa 2: validare stricta pe RoGov (executie SQL) + evaluare de robustete pe extern holdout
-
----
-
-## English
-
-### About the project
-
-RoGov-SQL is a bilingual `NL -> SQL` benchmark over Romanian open government data.
-
-Goal: questions in Romanian and English mapped to valid SQL in two domains:
-
-- education (`edu_reteaua_scolara`)
-- rail transport (`rail_mers_tren`)
-
-This repository is a data-preparation pipeline, not a web API/application.
-
-### Repository layout
-
-- `Faza_0/`: initial specifications
-- `Faza_1/`: cleaning scripts + generated SQL
-- `README.md`: project overview + NL-to-SQL templates
-
-### Actual schema (from `Faza_1`)
-
-Education schema:
-
-- `counties(county_id, county_code, county_name)`
-- `localities(locality_id, locality_name, residency_area, county_id)`
-- `schools(school_id, school_name, short_name, siiir_code, locality_id, ownership_type, unit_type, education_level, number_of_students)`
-
-Rail schema:
-
-- `stations(station_id, station_number, station_name, county)`
-- `trains(train_id, train_number, operator_name, category)`
-- `timetables(timetable_id, train_id, station_id, arrival_time, departure_time, service_category, day_type)`
-
-### Schema-aligned NL-to-SQL templates
-
-#### Education
-
-Template E1:
-
-- RO: `Listeaza toate scolile din judetul [COUNTY_NAME].`
-- EN: `List all schools in [COUNTY_NAME] county.`
-
-```sql
-SELECT s.school_id, s.school_name, l.locality_name
-FROM schools s
-JOIN localities l ON s.locality_id = l.locality_id
-JOIN counties c ON l.county_id = c.county_id
-WHERE c.county_name = '[COUNTY_NAME]';
+```bash
+python -m dataset_generator.cli prepare-llamafactory \
+  --out-dir datasets/llamafactory
 ```
 
-Template E2:
+This produces normalized Alpaca JSONL files plus
+`datasets/llamafactory/dataset_info.json`.
 
-- RO: `Listeaza scolile din mediul [RESIDENCY_AREA] din judetul [COUNTY_NAME].`
-- EN: `List schools in [RESIDENCY_AREA] areas from [COUNTY_NAME] county.`
+## Fine-Tuning
 
-```sql
-SELECT s.school_id, s.school_name, l.locality_name
-FROM schools s
-JOIN localities l ON s.locality_id = l.locality_id
-JOIN counties c ON l.county_id = c.county_id
-WHERE c.county_name = '[COUNTY_NAME]'
-  AND l.residency_area = '[RESIDENCY_AREA]';
-```
+LLaMA-Factory training configs are under `training/llamafactory/`.
+The full runbook is in [FINETUNING.md](/mnt/home/fizlabrl/NLSQLRO/FINETUNING.md).
 
-Template E3:
+## Operations
 
-- RO: `Care este numarul total de elevi in scolile liceale (PJ) din judetul [COUNTY_NAME]?`
-- EN: `What is the total number of students in high-school-level legal-entity schools in [COUNTY_NAME] county?`
+Helper scripts are under `scripts/`:
 
-```sql
-SELECT SUM(s.number_of_students) AS total_students
-FROM schools s
-JOIN localities l ON s.locality_id = l.locality_id
-JOIN counties c ON l.county_id = c.county_id
-WHERE c.county_name = '[COUNTY_NAME]'
-  AND s.unit_type = 'PJ'
-  AND s.education_level LIKE '%Liceal%';
-```
+- `source scripts/activate.sh`
+- `bash scripts/clean_gpu_mem.sh --gpus "0 1 2 3"`
+- `bash scripts/train_all.sh --gpus "0,1,2,3"`
 
-#### Rail
+## Local Documentation
 
-Template T1:
-
-- RO: `Listeaza toate trenurile operate de [OPERATOR].`
-- EN: `List all trains operated by [OPERATOR].`
-
-```sql
-SELECT t.train_id, t.train_number, t.category
-FROM trains t
-WHERE t.operator_name = '[OPERATOR]';
-```
-
-Template T2:
-
-- RO: `Listeaza toate trenurile care pleaca din statia [STATION_NAME] intre [TIME_START] si [TIME_END].`
-- EN: `List all trains departing from [STATION_NAME] between [TIME_START] and [TIME_END].`
-
-```sql
-SELECT DISTINCT t.train_number, t.operator_name, tt.departure_time
-FROM trains t
-JOIN timetables tt ON t.train_id = tt.train_id
-JOIN stations s ON tt.station_id = s.station_id
-WHERE s.station_name = '[STATION_NAME]'
-  AND tt.departure_time >= '[TIME_START]'
-  AND tt.departure_time <= '[TIME_END]'
-ORDER BY tt.departure_time;
-```
-
-Template T3:
-
-- RO: `Listeaza trenurile care trec prin [STATION_A] si apoi prin [STATION_B].`
-- EN: `List trains that pass through [STATION_A] and then [STATION_B].`
-
-```sql
-SELECT DISTINCT t.train_number, t.operator_name
-FROM trains t
-JOIN timetables tta ON t.train_id = tta.train_id
-JOIN stations sa ON tta.station_id = sa.station_id
-JOIN timetables ttb ON t.train_id = ttb.train_id
-JOIN stations sb ON ttb.station_id = sb.station_id
-WHERE sa.station_name = '[STATION_A]'
-  AND sb.station_name = '[STATION_B]'
-  AND tta.timetable_id < ttb.timetable_id;
-```
-
-### Important notes
-
-- In education data, `AR` rows usually have `number_of_students = NULL`; for totals use `s.unit_type = 'PJ'`.
-- For education level filters, use `LIKE` on `education_level` instead of strict equality.
-- For rail queries, use the `timetables` table (plural), not `timetable`.
-
-### External Dataset (Intermediate Finetune)
-
-For intermediate Romanian NL-to-SQL tuning, the project also uses:
-
-- `madlad_4gpu_full_merged/operators_alpaca_ro.jsonl`
-- `madlad_4gpu_full_merged/queries_alpaca_ro.jsonl`
-- `madlad_4gpu_full_merged/manifest_merged.json`
-
-This dataset is useful but should be cleaned before SFT:
-
-- some rows fail due to SQL dialect/execution issues (`DATE_SUB`, `DATEADD`, `NOW`, `YEAR`, etc.)
-- some natural-language fields have inconsistent encoding artifacts
-
-Cleaning utility:
-
-- `dataset_gen/clean_madlad_dataset.py`
-
-Technical behavior:
-
-- SQL output (`output`) and SQL context in `input` are NOT rewritten
-- SQL/table/column names stay in English
-- only natural-language fields are normalized (`instruction`, `system`, Romanian question text, `metadata.sql_explanation_ro`)
-- optional per-row SQL execution validation (`context + output`) in SQLite
-- optional track keyword rules:
-  - `queries`: only `SELECT/WITH`
-  - `operators`: only DML/DDL
-
-Recommended parallel server run:
-
-```powershell
-python -m dataset_gen.clean_madlad_dataset `
-  --input-dir madlad_4gpu_full_merged `
-  --output-dir madlad_4gpu_full_merged_clean `
-  --workers 32 `
-  --strict-sql-type
-```
-
-Outputs:
-
-- `madlad_4gpu_full_merged_clean/operators_alpaca_ro.clean.jsonl`
-- `madlad_4gpu_full_merged_clean/queries_alpaca_ro.clean.jsonl`
-- `madlad_4gpu_full_merged_clean/manifest_clean.json` (keep rates, drop reasons, cleaning stats)
-
-#### Recommended Finetuning Schedule (2 stages)
-
-Stage 1: intermediate SFT on cleaned external dataset
-
-- goal: broad Romanian NL-to-SQL competence
-- data: `operators_alpaca_ro.clean.jsonl` + `queries_alpaca_ro.clean.jsonl`
-- recommended mixture:
-  - 60% `queries`
-  - 40% `operators`
-
-Stage 2: in-domain SFT on RoGov
-
-- goal: specialize to real project schemas (`edu_reteaua_scolara`, `rail_mers_tren`)
-- data: internal validated set (`rogov_master.jsonl` or Alpaca/Chat export)
-- recommended starting mixture:
-  - 80% RoGov
-  - 20% cleaned external subset (to preserve generalization)
-
-Recommended evaluation checkpoints:
-
-- after Stage 1: evaluate on small internal RoGov benchmark + external holdout
-- after Stage 2: strict RoGov SQL-execution evaluation + robustness check on external holdout
+- [Generator guide](/mnt/home/fizlabrl/NLSQLRO/dataset_generator/README.md)
+- [External dataset guide](/mnt/home/fizlabrl/NLSQLRO/datasets_external/README.md)
+- [Research materials guide](/mnt/home/fizlabrl/NLSQLRO/research_plan/README.md)
+- [SQL dump preparation guide](/mnt/home/fizlabrl/NLSQLRO/research_plan/Faza_1/README.md)
+- [Fine-tuning runbook](/mnt/home/fizlabrl/NLSQLRO/FINETUNING.md)
+- [Operational scripts guide](/mnt/home/fizlabrl/NLSQLRO/scripts/README.md)
+- [Project plan](/mnt/home/fizlabrl/NLSQLRO/PLAN.md)

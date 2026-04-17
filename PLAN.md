@@ -13,13 +13,13 @@ This file is a living plan and will be updated as we implement.
 ## Current Baseline
 
 - SQL dumps available:
-  - `Faza_1/edu_reteaua_scolara.sql`
-  - `Faza_1/rail_mers_tren.sql`
-- Seed datasets created and validated:
-  - `edu_examples_10.jsonl`
-  - `rail_examples_10.jsonl`
+  - `research_plan/Faza_1/edu_reteaua_scolara.sql`
+  - `research_plan/Faza_1/rail_mers_tren.sql`
+- Current dataset outputs:
+  - `datasets/multi_gpu_runs/run_*/rogov_alpaca.merged.jsonl`
+  - `datasets/madlad_4gpu_full_merged_clean/*.clean.jsonl`
 - Validator available:
-  - `validate_jsonl_examples.py` (schema checks, SQL execution, non-empty mode)
+  - `python -m dataset_generator.cli validate --config <config.json>`
 
 ## Recommended Model Stack
 
@@ -90,7 +90,7 @@ Training exports:
 
 ### M1 - Foundation
 
-- [ ] Create `datasetgen/` package structure
+- [ ] Create/maintain `dataset_generator/` package structure
 - [ ] Add schema introspection utility (tables, columns, sample values)
 - [ ] Add SQL execution + retry-repair module
 - [ ] Add deterministic IDs and run metadata
@@ -131,3 +131,4 @@ Training exports:
 ## Update Log
 
 - 2026-04-04: Initial plan created from recap, recommendations, and pipeline design decisions.
+
