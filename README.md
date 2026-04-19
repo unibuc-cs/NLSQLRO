@@ -132,10 +132,10 @@ Helper scripts are under `scripts/`:
 
 ## Local Documentation
 
-- [Generator guide](/mnt/home/fizlabrl/NLSQLRO/dataset_generator/README.md)
-- [External dataset guide](/mnt/home/fizlabrl/NLSQLRO/datasets_external/README.md)
-- [Research materials guide](/mnt/home/fizlabrl/NLSQLRO/research_plan/README.md)
-- [SQL dump preparation guide](/mnt/home/fizlabrl/NLSQLRO/research_plan/Faza_1/README.md)
-- [Fine-tuning runbook](/mnt/home/fizlabrl/NLSQLRO/FINETUNING.md)
-- [Operational scripts guide](/mnt/home/fizlabrl/NLSQLRO/scripts/README.md)
-- [Project plan](/mnt/home/fizlabrl/NLSQLRO/PLAN.md)
+- [Generator guide](dataset_generator/README.md)
+- [External dataset guide](datasets_external/README.md)
+- [Research materials guide](research_plan/README.md)
+- [SQL dump preparation guide](research_plan/Faza_1/README.md)
+- [Fine-tuning runbook](FINETUNING.md)
+- [Operational scripts guide](scripts/README.md)
+- [Project plan](PLAN.md)
